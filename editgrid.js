@@ -172,18 +172,21 @@ function makeNode( parent, nodeParent, val,field ) {
 	var node = { x:0, y:0, 
 		val : val,
 		field : field,
+		realField : field,
 		gun : parent,
 		parent : nodeParent,
 		generation : nodeParent?nodeParent.generation+1:0,
 		children : []
 	};
+	if( node.field.length === 21 && !node.field.includes( " " ) && node.field.match( /[a-zA-Z0-9]/ ) )
+		node.field = node.substr( 15 );
 	if( node.parent )
 		node.parent.children.push( node );
 
 	
 	parent.map().on( mapAll );
 	function mapAll(val,field ) {
-		var child = node.children.find( child=>child.field === field );
+		var child = node.children.find( child=>child.realField === field );
 		if( !child )
 			makeNode( parent.get(field), node, val, field );				
 		else
