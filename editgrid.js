@@ -139,7 +139,7 @@ function makeNode( parent, nodeParent, val,field ) {
 		generation : nodeParent?nodeParent.generation+1:0,
 		children : []
 	};
-	if( node.field.length === 21 && !node.field.includes( " " ) && node.field.match( /[a-zA-Z0-9]*/ ) )
+	if( node.field.length === 22 && !node.field.includes( " " ) && node.field.match( /[a-zA-Z0-9]*/ ) )
 		node.field = node.field.substr( 15 );
 	if( node.parent )
 		node.parent.children.push( node );
