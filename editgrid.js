@@ -109,45 +109,6 @@ var root = document.documentElement;
 //console.log( root );
 
 
-//var toolbox_window = window.open("toolbox.js");
-if( false && !location.pathname.includes( "editor/toolbox.html" ) ) {
-	origin = origin.replace( "wss:", "https:" );
-	origin = origin.replace( "ws:", "http:" );
-	console.log( "origin is now:", origin );
-	console.log( "Launch Popup:", origin + "/toolbox.html" );
-	var toolbox_window = window.open( origin + "/toolbox.html", "editor_toolbox" );
-
-	window.addEventListener( 'message', ProcessChildMessage );
-
-	//toolbox_window.postMessage( '{op:"connected"}', toolbox_window.location.href );
-
-	function ProcessChildMessage(message) {
-		// do something with the message
-		_debug && console.log( "Parent Message:", message );
-		try {
-			var msg = message.data;
-			if( msg.op == "Hello" ) {
-				postDivs(toolbox_window);
-				postStyles(toolbox_window);
-				postScripts(toolbox_window);
-			}
-			else if( msg.op === "select" ) {
-				selected_control = allControls[msg.index];
-			}
-			else if( msg.op === "setSrc" ) {
-				var tmp = allControls[msg.index];
-				var undoRecord = { control: tmp, src: tmp.element.src };
-				undo.push( undoRecord );
-				tmp.element.src = msg.src;
-			}
-
-		} catch(err) {
-		}
-	}
-
-}
-
-
 var gameContainer;
 var editmesh;
 var visible = true;
@@ -178,8 +139,8 @@ function makeNode( parent, nodeParent, val,field ) {
 		generation : nodeParent?nodeParent.generation+1:0,
 		children : []
 	};
-	if( node.field.length === 21 && !node.field.includes( " " ) && node.field.match( /[a-zA-Z0-9]/ ) )
-		node.field = node.substr( 15 );
+	if( node.field.length === 21 && !node.field.includes( " " ) && node.field.match( /[a-zA-Z0-9]*/ ) )
+		node.field = node.field.substr( 15 );
 	if( node.parent )
 		node.parent.children.push( node );
 
