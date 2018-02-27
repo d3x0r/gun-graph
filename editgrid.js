@@ -46,11 +46,12 @@ function setupGrid() {
 window.addEventListener( "resize", handleResize );
 
 function handleResize() {
+	if( editmesh )
 		for( var a = 0; a < 1; a++ ) {
 			var meshrect = editmesh.getBoundingClientRect();
 		        editmesh.width = meshrect.right - meshrect.left;
 		        editmesh.height = meshrect.bottom - meshrect.top;
-		        console.log( "First Init", meshrect );
+		        //console.log( "First Init", meshrect );
 		}
 	if( editmesh )
 		drawNodes();
