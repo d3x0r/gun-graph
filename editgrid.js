@@ -90,7 +90,10 @@ if( Gun ) {
 				}
 			} else {
 				console.log( "Had thing already..." );
-				thing.parents.push( parent );
+				if( thing.parents )
+					thing.parents.push( parent );
+				else
+					thing.parents = [parent];
 			}
 			var priorParent = parent;
 			parent = thing;
@@ -205,6 +208,8 @@ function addEditor() {
 		gameContainer.style.height = "100%";
 		gameContainer.style.zIndex = 10000;
 	        
+
+
 		editmesh = document.createElement( "canvas" );
 	        
 		gameContainer.appendChild( editmesh );
@@ -214,6 +219,11 @@ function addEditor() {
 		editmesh.width = 1920;
 		editmesh.height = 1080;
 		editmesh.style.border = 0;
+
+		var enableMouse = document.createElement( "button" );
+		editmesh.appendChild( enableMouse );
+		enableMouse.innerText = "Enable Mouse";
+		enableMouse.style.float = "right";
 
 		ctx=editmesh.getContext("2d");
 
@@ -293,7 +303,8 @@ function repelGenerations( node ) {
 	var done = [];
 	while( parent = parents.shift() )  {
 		done.push( parent );
-		repel( parent );
+		doRepel( parent );
+		if( parent.parents )
 		parent.parents.forEach( p=>{
 			if( done.find( (p2)=>p===p2 ) ) return; // already did this one
 			if( !parents.find( (p2)=>p===p2 ) ) // not going to do this one yet
@@ -321,6 +332,7 @@ function repelGenerations( node ) {
 }
 
 function siblings( node ) {
+	if( node.parents )
 	node.parents.forEach( parent=>{
 	parent.children.forEach( child=>{
 		if( child != node ) {
@@ -369,14 +381,14 @@ function all( root, node ) {
 
 function updateNode(node){
 	if( !node ) return;
-	if( node.parents.length )
+	if( node.parents )
 	{
 		var l = Math.sqrt(node.x *node.x+node.y*node.y);
 		if(l) {
 		 	moveNode( node, node.x * 20 / (l * (10/node.generation)/3),
 		 		 ( node.y * 20 / nodeYScale ) / (l * (10/node.generation)/3) );
 		}
-	}
+	
 	node.parents.forEach( parent=>{
 		var distance = ( ( parent.x - node.x ) * ( parent.x - node.x ) )
 			  + ( ( parent.y - node.y ) * ( parent.y - node.y ) * nodeYScale );
@@ -400,6 +412,7 @@ function updateNode(node){
 
 		siblings( node );
 	} );
+	}
 
 	node.children.forEach( updateNode );
 }
@@ -427,7 +440,7 @@ function drawControl(node){
 	ctx.beginPath();
 	ctx.ellipse( offsetX + node.x, offsetY + node.y, nodeWidth, nodeHeight, 0, 0, 2*Math.PI, false );
 	ctx.stroke();
-
+	if( node.parents )
 	node.parents.forEach( parent=>{
 		ctx.strokeStyle = "red";
 		ctx.beginPath();
