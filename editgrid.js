@@ -82,7 +82,7 @@ if( Gun ) {
 			var field = lex[val_];
 			var thing = nodemap.get( soul );
 			if( !thing ) {
-				nodemap.set( soul, thing = { parent : parent } );
+				nodemap.set( soul, thing = { parents : parent?[parent]:null, at:at, thisNode:this } );
 				if( !thing.parent ) {
 					roots.push( { name: soul, thing: thing } );
 					selector.add( roots[roots.length-1] );
@@ -90,6 +90,7 @@ if( Gun ) {
 				}
 			} else {
 				console.log( "Had thing already..." );
+				thing.parents.push( parent );
 			}
 			var priorParent = parent;
 			parent = thing;
@@ -135,14 +136,14 @@ function makeNode( parent, nodeParent, val,field ) {
 		field : field,
 		realField : field,
 		gun : parent,
-		parent : nodeParent,
+		parents : nodeParent?[nodeParent]:null,
 		generation : nodeParent?nodeParent.generation+1:0,
 		children : []
 	};
 	if( node.field.length === 22 && !node.field.includes( " " ) && node.field.match( /[a-zA-Z0-9]*/ ) )
 		node.field = node.field.substr( 15 );
-	if( node.parent )
-		node.parent.children.push( node );
+	if( node.parents )
+		node.parents[0].children.push( node );
 
 	
 	parent.map().on( mapAll );
@@ -272,59 +273,6 @@ function setupKeyPress( window ) {
 	var collect = '';
 	var lasttick = Date.now();
 	window.addEventListener( "keydown", (key)=>{
-		var now;
-		if( ( now = Date.now() ) - lasttick > 500 ) 
-			collect = '';
-		lasttick = now;
-
-		// -----   CTRL+ALT+C and Escape for edit keys
-		if( key.key == 'Escape' ) {
-			if( visible ) {
-				visible = false;
-				gameContainer.style.visibility = "hidden"; 
-			}
-		}
-
-		if( key.ctrlKey && key.altKey ) {
-			if( key.key == 'c' || key.key == 'C' )
-			{
-				collect = ''; 
-				gameContainer.style.visibility = "visible"; 
-				visible = true;
-				drawNodes();
-			}
-			console.log( "keydown..." );	
-		}
-	
-		if( key.key == 'z' ) {
-			if( key.ctrlKey ) {
-				Undo();
-			}
-		}
-
-		// ----- keystrokes 'edit' and 'done' to edit things.
-		if( key.key == 'd' || key.key=='D' ) if( collect === '' ) collect += "d";
-		if( key.key == 'o' || key.key=='O') if( collect === 'd' ) collect += "o";
-		if( key.key == 'n' || key.key=='N') if( collect === 'do' ) collect += "n";
-		if( key.key == 'e' || key.key=='E') {
-			if( collect === 'don' ) { 
-				visible = false;
-				gameContainer.style.visibility = "hidden"; 
-			}
-		}
-
-
-		if( key.key == 'e' || key.key=='E' ) if( collect === '' ) collect += "e";
-		if( key.key == 'd' || key.key=='D') if( collect === 'e' ) collect += "d";
-		if( key.key == 'i' || key.key=='I') if( collect === 'ed' ) collect += "i";
-		if( key.key == 't' || key.key=='T') 
-			if( collect === 'edi' ) { 
-				collect = ''; 
-				visible = true;
-				addEditor();
-				
-			}
-		
 	} );
 }
 
@@ -341,7 +289,20 @@ function updateNodes() {
 
 function repelGenerations( node ) {
 	var parent;
-	for( parent = node.parent; parent; parent = parent.parent ) {
+	var parents = [].concat( node.parents );
+	var done = [];
+	while( parent = parents.shift() )  {
+		done.push( parent );
+		repel( parent );
+		parent.parents.forEach( p=>{
+			if( done.find( (p2)=>p===p2 ) ) return; // already did this one
+			if( !parents.find( (p2)=>p===p2 ) ) // not going to do this one yet
+				parents.push( p );
+		} );
+	}
+
+	function doRepel( parent )
+	{
 		var distance = ( ( parent.x - node.x ) * ( parent.x - node.x ) )
 			  + ( ( parent.y - node.y ) * ( parent.y - node.y ) * nodeYScale );
 		distance = Math.sqrt( distance );
@@ -360,9 +321,7 @@ function repelGenerations( node ) {
 }
 
 function siblings( node ) {
-	
-	var parent = node.parent;
-	if( parent )
+	node.parents.forEach( parent=>{
 	parent.children.forEach( child=>{
 		if( child != node ) {
 			var distance = ( ( child.x - node.x ) * ( child.x - node.x ) )
@@ -380,7 +339,7 @@ function siblings( node ) {
 			
 		} 
 	} );
-
+	} );
 }
 
 // move away from everything.
@@ -410,7 +369,7 @@ function all( root, node ) {
 
 function updateNode(node){
 	if( !node ) return;
-	if( node.parent )
+	if( node.parents.length )
 	{
 		var l = Math.sqrt(node.x *node.x+node.y*node.y);
 		if(l) {
@@ -418,21 +377,21 @@ function updateNode(node){
 		 		 ( node.y * 20 / nodeYScale ) / (l * (10/node.generation)/3) );
 		}
 	}
-	if( node.parent ) {
-		var distance = ( ( node.parent.x - node.x ) * ( node.parent.x - node.x ) )
-			  + ( ( node.parent.y - node.y ) * ( node.parent.y - node.y ) * nodeYScale );
+	node.parents.forEach( parent=>{
+		var distance = ( ( parent.x - node.x ) * ( parent.x - node.x ) )
+			  + ( ( parent.y - node.y ) * ( parent.y - node.y ) * nodeYScale );
 		distance = Math.sqrt( distance );
 		if( distance < 1 ) {
 			moveNode( node, (Math.random() -0.5) * 3, (Math.random()-0.5) * 3 )
 			return updateNode( node );
 		}
 		if( distance < nodeWidth ) {	
-			moveNode( node, ((node.x-node.parent.x)/distance) * ( nodeWidth - distance ) * 0.5,
-				 ((node.y-node.parent.y)/distance) * ( nodeWidth - distance ) / nodeYScale * 0.5 );
+			moveNode( node, ((node.x-parent.x)/distance) * ( nodeWidth - distance ) * 0.5,
+				 ((node.y-parent.y)/distance) * ( nodeWidth - distance ) / nodeYScale * 0.5 );
 		}
 		else if( distance > ( nodeWidth * 1.5 ) ) {
-			moveNode( node, - ((node.x-node.parent.x)/distance) * ( distance - nodeWidth*1.5) * 0.4 
-				, - ((node.y-node.parent.y)/distance) * ( distance - nodeWidth*1.5 ) / nodeYScale * 0.4 );
+			moveNode( node, - ((node.x-parent.x)/distance) * ( distance - nodeWidth*1.5) * 0.4 
+				, - ((node.y-parent.y)/distance) * ( distance - nodeWidth*1.5 ) / nodeYScale * 0.4 );
 		}
 
 		all( rootNode, node );
@@ -440,7 +399,7 @@ function updateNode(node){
 		repelGenerations( node );
 
 		siblings( node );
-	}	
+	} );
 
 	node.children.forEach( updateNode );
 }
@@ -469,16 +428,16 @@ function drawControl(node){
 	ctx.ellipse( offsetX + node.x, offsetY + node.y, nodeWidth, nodeHeight, 0, 0, 2*Math.PI, false );
 	ctx.stroke();
 
-	if( node.parent ) {
+	node.parents.forEach( parent=>{
 		ctx.strokeStyle = "red";
 		ctx.beginPath();
 		ctx.moveTo(offsetX + node.x, offsetY+node.y);
-		ctx.lineTo(offsetX + node.parent.x, offsetY+node.parent.y);
+		ctx.lineTo(offsetX + parent.x, offsetY+parent.y);
 		ctx.stroke();
-	}
+	} );
 
 	var text = node.field;
-	if( !node.parent )
+	if( !node.parents )
 		text = node.val;
 	if( !node.children.length )
 		text += " = " + node.val;
